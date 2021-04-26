@@ -1,0 +1,67 @@
+[mysqld]
+datadir=/var/lib/mysql
+socket=/var/lib/mysql/mysql.sock
+user=mysql
+
+innodb_buffer_pool_size = 8192M
+innodb_log_file_size = 1024M
+max_connections=1000
+event_scheduler=ON
+
+innodb_file_per_table= ON
+innodb_flush_log_at_trx_commit = 2
+innodb_flush_method=O_DIRECT
+innodb_log_buffer_size = 24M
+innodb_read_io_threads=8
+innodb_write_io_threads=8
+innodb_buffer_pool_instances=8
+
+
+query_cache_size = 100M
+
+slave-skip-errors = 1062
+#slave-skip-errors=all
+slave-skip-errors=1054
+slave-skip-errors=1051
+slave-skip-errors=1146
+slave-skip-errors=1452
+#####__Chong mat dong bo DB___
+sync_binlog = 0
+##############################
+
+# Disabling symbolic-links is recommended to prevent assorted security risks
+symbolic-links=0
+
+# Path to Galera library
+wsrep_provider=/usr/lib64/libgalera_smm.so
+
+# Cluster connection URL contains the IPs of node#1, node#2 and node#3
+wsrep_cluster_address=gcomm://192.168.0.43,192.168.0.44,192.168.0.45
+
+# In order for Galera to work correctly binlog format should be ROW
+binlog_format=ROW
+
+# MyISAM storage engine has only experimental support
+default_storage_engine=InnoDB
+
+# This changes how InnoDB autoincrement locks are managed and is a requirement for Galera
+innodb_autoinc_lock_mode=2
+
+# Node #1 address
+wsrep_node_address=192.168.0.43
+
+# SST method
+wsrep_sst_method=xtrabackup-v2
+
+# Cluster name
+wsrep_cluster_name=CLIPZONE
+
+# Authentication for SST method
+wsrep_sst_auth="syncdb:passwd123"
+
+[mysqld_safe]
+log-error=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid
+
+[xtrabackup]
+target_dir = /opt/backupdb/mysql

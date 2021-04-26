@@ -1,0 +1,31 @@
+Cài đặt NTP Server trên Centos/Redhat
+
+1. Cài đặt NTP Server
+
+	# yum install ntp
+
+2. Chỉnh sửa file cấu hình thêm thông tin Server:
+
+	server 1.vn.pool.ntp.org iburst 
+	server 3.asia.pool.ntp.org iburst 
+	server 1.asia.pool.ntp.org iburst
+
+3. Thêm thông số network local cần sync time
+	
+	restrict 192.168.0.0 netmask 255.255.255.0 nomodify notra
+
+4. Start Services
+
+	# systemctl start ntpd
+	# systemctl enable ntpd
+	# systemctl status ntpd
+
+5. Trên máy client add lệnh sau vào cronjob
+
+	/usr/sbin/ntpdate  <IP_NTP Server>
+
+6. Trên máy windows vào mục change internet time
+
+
+
+

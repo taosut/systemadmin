@@ -1,0 +1,10 @@
+https://www.if-not-true-then-false.com/2010/install-apache-php-on-fedora-centos-red-hat-rhel/
+
+https://www.if-not-true-then-false.com/2010/install-svn-subversion-server-on-fedora-centos-red-hat-rhel/
+
+https://www.if-not-true-then-false.com/2010/svn-subversion-access-control-with-apache-and-mod-authz-svn/
+
+https://www.if-not-true-then-false.com/2012/svn-subversion-backup-and-restore/
+
+https://www.howtoforge.com/tutorial/subversion-svn-with-apache-and-letsencrypt-on-centos/
+

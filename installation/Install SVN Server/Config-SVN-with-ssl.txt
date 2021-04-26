@@ -1,0 +1,150 @@
+LINK THAM KHAO : https://www.howtoforge.com/tutorial/subversion-svn-with-apache-and-letsencrypt-on-centos/
+
+## Step 1 - Install Apache Httpd on CentOS 7
+
+$> yum -y install httpd httpd-tools mod_ssl
+
+## Run firewall-cmd commands below.
+
+$> firewall-cmd --permanent --zone=public --add-service=http
+$> firewall-cmd --reload
+
+## Now start the httpd service and add it to be started at boot.
+$> systemctl start httpd
+$> systemctl enable httpd
+
+
+## Step 2 - Install Apache Subversion (SVN)
+
+$> yum -y install subversion subversion-tools mod_dav_svn
+$> svn --version
+svn, version 1.7.14 (r1542130)
+   compiled Apr 11 2018, 02:40:28
+
+Copyright (C) 2013 The Apache Software Foundation.
+This software consists of contributions made by many people; see the NOTICE
+file for more information.
+Subversion is open source software, see http://subversion.apache.org/
+
+The following repository access (RA) modules are available:
+
+* ra_neon : Module for accessing a repository via WebDAV protocol using Neon.
+  - handles 'http' scheme
+  - handles 'https' scheme
+* ra_svn : Module for accessing a repository using the svn network protocol.
+  - with Cyrus SASL authentication
+  - handles 'svn' scheme
+* ra_local : Module for accessing a repository on local disk.
+  - handles 'file' scheme
+
+## Step 3 - Configure the Subversion (SVN) Repository
+Create a new '/svn' master directory.
+
+$> mkdir /var/www/svn/
+
+And create a new sample repository named 'hakase-project' using the svnadmin command below.
+
+$> cd /var/www/svn/
+$> svnadmin create testrepo
+Now change the owner of the 'testrepo' directory to the 'apache' user and group.
+
+$> sudo chown -R apache:apache testrepo/
+And the svn repository has been created.
+
+***Additional for SELinux users, run commands below.
+
+chcon -R -t httpd_sys_content_t /var/www/svn/testrepo
+chcon -R -t httpd_sys_rw_content_t /var/www/svn/testrepo
+
+## Step 4 - Generate Let's encrypt SSL Certificate for Apache
+
+In this tutorial, we configure the svn server to use the HTTPS connection with a domain named 'svn.hakase-labs.io'. We will use a free Let's encrypt SSL certificate which can be generated with the certbot tool.
+
+Install certbot on the CentOS server with the yum command below.
+
+$> yum -y install certbot
+When the installation is complete, we need to add the HTTPS service to the firewalld services list.
+
+Run firewalld commands below.
+
+$> firewall-cmd --add-service=https --zone=public --permanent
+$> firewall-cmd --reload
+Now stop the httpd service, so we can generate the SSL Letsencrypt using the 'standalone' temporary web server.
+
+$> systemctl stop httpd
+Generate LE SSL cert
+
+Generate the Letsencrypt SSL Cert for the domain name 'svn.hakase-labs.io' using the certbot command below.
+
+$> certbot certonly --rsa-key-size 4096 --standalone --agree-tos --no-eff-email --email binhdt@m-mobile.vn -d svn.m-mobile.vn
+Now you will get the certificate files on the '/etc/letsencrypt/live' directory.
+
+## Step 5 - Configure Subversion Virtual Host on Apache Httpd
+In this step, we will create a new Apache httpd configuration for the svn access. We will configure the svn repository using a domain name 'svn.hakase-labs.io', and it will be accessible only for the registered users using the HTTP basic auth.
+
+Go to the '/etc/httpd/conf.d' directory and create a new svn configuration 'svn.conf'.
+
+$> cd /etc/httpd/conf.d/
+$> vi svn.conf
+Paste configurations below.
+<VirtualHost svn.m-mobile.vn:80>
+
+ServerName svn.m-mobile.vn
+DocumentRoot /var/www/html
+Redirect permanent / https://svn.m-mobile.vn
+
+</VirtualHost>
+
+<VirtualHost svn.m-mobile.vn:443>
+
+DocumentRoot /var/www/html
+ServerName svn.m-mobile.vn
+
+SSLEngine on
+SSLProtocol all -SSLv2
+SSLCipherSuite ALL:!ADH:!EXPORT:!SSLv2:RC4+RSA:+HIGH:+MEDIUM:+LOW
+SSLCertificateFile /etc/letsencrypt/live/svn.m-mobile.vn/fullchain.pem
+SSLCertificateKeyFile /etc/letsencrypt/live/svn.m-mobile.vn/privkey.pem
+
+ErrorLog logs/svn_error_log
+TransferLog logs/svn_access_log
+LogLevel warn
+
+<location /svn>
+DAV svn
+SVNParentPath /var/www/svn/
+AuthType Basic
+AuthName "SVN Repository"
+AuthUserFile /etc/svn-auth-users
+AuthzSVNAccessFile /etc/svn-access-control
+Require valid-user
+</location>
+
+<Files ~ "\.(cgi|shtml|phtml|php3?)$">
+    SSLOptions +StdEnvVars
+</Files>
+
+SetEnvIf User-Agent ".*MSIE.*" \
+         nokeepalive ssl-unclean-shutdown \
+         downgrade-1.0 force-response-1.0
+CustomLog logs/ssl_request_log \
+          "%t %h %{SSL_PROTOCOL}x %{SSL_CIPHER}x \"%r\" %b"
+</VirtualHost>
+
+Save the file and exit the editor.
+
+Next, we need to create a new list of users that will be able to view and commit files to the repository.
+
+Create a new user named 'hakase' using the htpasswd command below.
+
+$> htpasswd -b /etc/svn-auth-users binhdt 123456a@
+Now restart the Apache httpd services.
+
+$> systemctl restart httpd
+The 'binhdt' user now has an access to view and commit the source code to the 'testrepo' repository.
+
+## Step 6 - Testing
+Open your web browser and type the server URL, mine is this one: https://svn.m-mobile.vn/svn/testrepo/
+log in with user and password :
+user : binhdt
+pass : 123456a@
