@@ -1,8 +1,8 @@
 # ID chat Telegram
-USERID="-475441181"
+USERID="-308566103"
 
 # API Token bot
-TOKEN="1091266222:AAH6yXzO2uFXELGkPu2YDSSF0DSMe1g8Si8"
+TOKEN="1480902290:AAE1R5MrVakkj-5BlxczZ2VKhG_AOpKfOL4"
 
 TIMEOUT="10"
 
@@ -37,3 +37,4 @@ if [ -n "$SSH_CLIENT" ]; then
     # Xóa file temp khi script thực hiện xong
     rm $TMPFILE
 fi
+
