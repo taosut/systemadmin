@@ -1,8 +1,8 @@
 # ID chat Telegram
-USERID="-308566103"
+USERID="-475441181"
 
 # API Token bot
-TOKEN="1480902290:AAE1R5MrVakkj-5BlxczZ2VKhG_AOpKfOL4"
+TOKEN="1091266222:AAH6yXzO2uFXELGkPu2YDSSF0DSMe1g8Si8"
 
 TIMEOUT="10"
 
@@ -15,7 +15,8 @@ DATE_EXEC="$(date "+%d %b %Y %H:%M")"
 # File temp
 TMPFILE='/tmp/ipinfo.txt'
 
-if [ -n "$SSH_CLIENT" ]; then
+if [ -n "$SSH_CLIENT" ]; 
+then
     IP=$(echo $SSH_CLIENT | awk '{print $1}')
     PORT=$(echo $SSH_CLIENT | awk '{print $3}')
     HOSTNAME=$(hostname -f)
@@ -37,4 +38,3 @@ if [ -n "$SSH_CLIENT" ]; then
     # Xóa file temp khi script thực hiện xong
     rm $TMPFILE
 fi
-
