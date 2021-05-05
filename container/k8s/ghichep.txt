@@ -1,0 +1,23 @@
+1. Kubernetest: là một platform dùng để run, deploy, scaling và manage các ứng dụng, service được đóng gói dưới dạng container.
+	Google (GKE): Google Kubernetest Engin
+	AWS: EKS
+	Azure: AKS
+
+2. Các thành phần chính:
+	A. Master: 
+	Là trái tim của k8s, được xây dựng để quản lý hoạt động, thao tác với container trong cluster.
+		- API-SERVER : là điểm quản lý chính trong cluster, cho phép người đung cấu hình lượng lớn khối lượng công việc K8s. API cũng là đầu vào cho tất cả các lệnh được sử dụng quản lý cluster và tương tác với toàn bộ các thành phần còn lại trong cluster.
+		- ETCD: Được coi là cơ sở dữ liệu của K8s, lưu trữ toàn bộ cấu hình, meta data có thể sử dụng bởi mỗi node.
+		- CONTROLLER MANAGER: Là một số dịch vụ chịu trách nhiệm điều khiển trạng thái của cụm và thực hiện các tác vụ thường xuyên, đảm bảo số lượng repicas được xác định cho dịch vụ được deploy vào cụm. Chi tiết các hoạt động được ghi vào etcd.
+		- SCHEDULER: Cấu hình pods và services và node. Chịu trách nhiệm theo dõi sử dụng tài nguyên trong mỗi host để đảm bảo khối lượng công việc không lập lịch lên các tài nguyên không có sẵn.
+		- CLOUD CONTROLLER MANAGER: dùng để tương tác với các API của các Cloud Provider 
+	B. Node: Node là nền tảng nhưng máy chủ hoạt động trong k8s. Tên gọi cũ là minion. Một node có thể là một VM hoặc PM, mỗi node có nhưng services cần thiết để run pod và được quản lý bởi Master. Các Services trong node bao gồm:
+		- DOCKER RUNTIME: Docker chịu trách nhiệm pull image và run container.
+		- KUBELET: Kubelet lấy thông tin cấu hình một pod từ API Server và đảm bảo rằng các container được định nghĩa up và hoạt động. Đây là dịch vụ worker chịu trách nhiệm giao tiếp với Master Node. Nó chuyển tiếp thông tin từ Control Plane và tương tác với lưu trữ ETCD để đọc cấu hình hoặc ghi giá trị mới.
+		- KUBE PROXY: Kube-proxy chạy trong mỗi node để phân phối với mỗi mạng con của máy host, đảm bảo rằng dịch vụ sẵn sàng với bên ngoài. Nó đóng vai trò như một network proxy và một load balancer cho mỗi Service trên một Worker Node và quản lý định tuyến mạng cho gói tin TCP và UDP.
+
+3. Các thuật ngữ trong K8s:
+	+/ POD: Đối tượng nhỏ và đơn giản nhất của K8s, Đại diện cho tập container chạy trên cluster.
+	+/ LABELS: Các thẻ được đặt trên các đơn vị công việc đánh dấu là 1 phần của group phụ vụ cho mục đích quản lý và là mục tiêu cho các tác động.
+	+/ Services: Hoạt động như 1 bộ cần bằng tải cơ bản đại diện cho các contaner khác nhau.
+	+/ Repica Controller: Trong hệ thống Kubernetes, các bộ controllers là các vòng lặp điều khiển theo dõi trạng thái của mỗi cluster, sau đó chúng sẽ tạo hoặc yêu cầu sự thay đổi cần thiết. Mỗi controller thực hiện việc thay đổi để giúp hệ thống chuyển từ trạng thái hiện tại sang trạng thái mong muốn
