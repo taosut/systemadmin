@@ -1,0 +1,90 @@
+	1. Set Hostname Centos 6
+	$ cat /etc/sysconfig/network
+NETWORKING=yes
+HOSTNAME=mq-01.example.com
+	
+	
+	2. Add 2 line to hosts file: 
+	192.168.254.132 rabbitmq02 rabbitmq02.localdomain
+	192.168.254.133 rabbitmq01 rabbitmq01.localdomain
+
+	/etc/init.d/network restart
+	3. Install EPEL Repo:
+	yum -y install epel-release
+	Download the EPEL RPM.
+	#wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm 
+	#wget http://rpms.famillecollet.com/enterprise/remi-release-6.rpm
+	
+	Install the EPEL RPM.
+	#rpm -ivh epel-release-6*.rpm
+	#rpm –ivh remi-release-6.rpm
+	4. Install Erlang via "yum"
+	#yum install erlang
+	
+	5. Add Elarng Repo an Install Erlang
+	wget http://packages.erlang-solutions.com/erlang-solutions-1.0-1.noarch.rpm
+sudo rpm -Uvh erlang-solutions-1.0-1.noarch.rpm
+sudo yum install erlang
+	
+	From <https://computingforgeeks.com/installing-rabbitmq-on-centos-6-centos-7/> 
+	
+	6. Add Rabbit MQ Repo
+	Centos 7: 
+	cat << EOF | sudo tee /etc/yum.repos.d/rabbitmq.repo
+[bintray-rabbitmq-server]
+name=bintray-rabbitmq-rpm
+baseurl=https://dl.bintray.com/rabbitmq/rpm/rabbitmq-server/v3.8.x/el/7/
+gpgcheck=0
+repo_gpgcheck=0
+enabled=1
+EOF
+	
+	Centos 6: 
+	cat << EOF | sudo tee /etc/yum.repos.d/rabbitmq.repo
+[bintray-rabbitmq-server]
+name=bintray-rabbitmq-rpm
+baseurl=https://dl.bintray.com/rabbitmq/rpm/rabbitmq-server/v3.8.x/el/6/
+gpgcheck=0
+repo_gpgcheck=0
+enabled=1
+EOF
+	7. Install rabbitmq yum
+	yum -y install rabbitmq-server
+	
+	8. Start rabbitmq
+	#service rabbitmq-server start
+	
+	9. Start when startup
+	chkconfig rabbitmq-server on
+	10. Open port on iptables
+	Mở port firewall nếu có firewall chạn các port sau:
+	· 4369: epmd, a peer discovery service used by RabbitMQ nodes and CLI tools
+	· 5672, 5671: used by AMQP 0-9-1 and 1.0 clients without and with TLS
+	· 25672: used by Erlang distribution for inter-node and CLI tools communication and is allocated from a dynamic range (limited to a single port by default, computed as AMQP port + 20000). See networking guide for details.
+	· 15672: HTTP API clients and rabbitmqadmin (only if the management plugin is enabled)
+	· 61613, 61614: STOMP clients without and with TLS (only if the STOMP plugin is enabled)
+	· 1883, 8883: (MQTT clients without and with TLS, if the MQTT plugin is enabled
+	· 15674: STOMP-over-WebSockets clients (only if the Web STOMP plugin is enabled)
+	· 15675: MQTT-over-WebSockets clients (only if the Web MQTT plugin is enabled)
+	Dùng lệnh “vi” để thêm các port cần mở như trên vào iptables
+	# vi /etc/sysconfig/iptables 
+	Thêm đoạn sao vào file iptables
+	# vi /etc/sysconfig/iptables
+	##### RabbitMQ ################
+	-A INPUT -m state --state NEW,ESTABLISHED -m tcp -p tcp -m multiport –dports 4369,5671,5672,25672,15672,61613,61614,1883,8883,15674,15675 -j ACCEPT
+	-A OUTPUT -m state --state NEW,ESTABLISHED -m tcp -p tcp -m multiport --dports 4369,5671,5672,25672,15672,61613,61614,1883,8883,15674,15675 -j ACCEPT
+	
+	11. Create user
+	$ sudo rabbitmqctl add_user admin password 
+	$ sudo rabbitmqctl set_user_tags admin administrator
+	$ sudo rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
+	12. Enable mgmt web console
+	rabbitmq-plugins enable rabbitmq_management
+	· The Web UI is located at: http://server-name:15672/ or localhost:15672
+	Mặc định user/pass là : guest/guest
+	· The Web UI uses an HTTP API provided by the same plugin. Said API's documentation can be accessed at http://server-host:15672/api/ or our latest HTTP API documentation here). 
+	· Download rabbitmqadmin at: http://server-name:15672/cli/ 
+	NOTE : tạo user rabbit cho một group 
+	rabbitmqctl add_user ivrmq ivrmq123
+	rabbitmqctl set_user_tags ivrmq administrator
+	rabbitmqctl add_vhost IVR

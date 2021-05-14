@@ -1,0 +1,125 @@
+Cài đặt XtraDB-Backup & XtraDB-Cluster 5.7 trên Centos 8
+	1. Disable Selinux
+	Vi /etc/sysconfig/selinux
+	Reboot
+	2. Mount file ISO
+	mount /dev/cdrom /mnt/
+	3. Backup repo
+	mv /etc/yum.repos.d/*.repo /tmp/
+	4. Tao file repo local
+	vi /etc/yum.repos.d/local.repo
+	#
+[LocalRepo_BaseOS]
+name=LocalRepository_BaseOS
+baseurl=file:///mnt/BaseOS
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+[LocalRepo_AppStream]
+name=LocalRepository_AppStream
+baseurl=file:///mnt/AppStream
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+	yum clean all
+	5. Download Percona XtraBackup + Percona XtraDB-Cluster, cai dat Percona release-noarch 
+	XtraBackup: https://www.percona.com/downloads/Percona-XtraBackup-2.4/Percona-XtraBackup-2.4.20/binary/redhat/8/x86_64/Percona-XtraBackup-2.4.20-rc8b4056-el8-x86_64-bundle.tar
+	XtraCluster: https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-5.7.31-31.45/binary/redhat/8/x86_64/Percona-XtraDB-Cluster-5.7.31-31.45-r565-el8-x86_64-bundle.tar
+	Percona release noarch: 
+	https://www.percona.com/downloads/percona-release/redhat/
+	rpm -ivh percona-release-latest.noarch.rpm
+	6. Disable module mysql
+	dnf module disable mysql
+	7. Cai dat cac goi sau cho XtraBackup
+	dnf install libev
+	dnf install perl-DBD-MySQL
+	8. Cai dat XtraBackup
+	rpm -ivh percona-xtrabackup-24-debuginfo-2.4.20-1.el8.x86_64.rpm
+	rpm -ivh percona-xtrabackup-24-2.4.20-1.el8.x86_64.rpm
+	9. Cai dat cac goi sau cho XtraCluster
+	dnf install python2
+	dnf install socat
+	dnf install qpress
+	rpm -ivh qpress-11-1.el8.x86_64.rpm
+	10. Cai dat XtraDB-Cluster
+	rpm -ivh Percona-XtraDB-Cluster-client-57-5.7.31-31.45.1.el8.x86_64.rpm
+	rpm -ivh Percona-XtraDB-Cluster-57-debuginfo-5.7.31-31.45.1.el8.x86_64.rpm
+	rpm -ivh Percona-XtraDB-Cluster-shared-57-5.7.31-31.45.1.el8.x86_64.rpm
+	rpm -ivh Percona-XtraDB-Cluster-server-57-5.7.31-31.45.1.el8.x86_64.rpm
+	11. Khoi dong MySQL
+	systemctl start mysql
+	12. Xem passwd tmp
+	grep 'temporary password' /var/log/mysqld.log
+	mysql -u root -p
+	13. Change password user root
+	ALTER USER 'root'@'localhost' IDENTIFIED BY 'P@ssword123';
+	flush privileges;
+	exit
+	Note: Forget Password Root MySQL
+ 
+	mysqld_safe --skip-grant-tables &
+	mysql>use mysql;
+	mysql>show tables;
+	update user set authentication_string=password('123456') where user='root';
+	Flush privileges;
+	Exit;
+	mysqladmin -u root -p shutdown
+	 
+	14. Tao rule open port firewalld cho cac node truoc khi cau hinh HA 
+	firewall-cmd --zone=public --permanent --add-port 3306/tcp
+	firewall-cmd --zone=public --permanent --add-port 4567/tcp
+	firewall-cmd --zone=public --permanent --add-port 4568/tcp
+	firewall-cmd --zone=public --permanent --add-port 4444/tcp
+	firewall-cmd --reload
+	15. Cấu hình Cluster 
+Node 01: 192.168.254.102
+- Tạo user sử dụng xác thực các node.
+	CREATE USER 'sstuser'@'%' IDENTIFIED BY 'password';
+	GRANT ALL PRIVILEGES ON * . * TO 'sstuser'@'%';
+	FLUSH PRIVILEGES;
+- Stop MySQL
+	systemctl stop mysql
+- Thêm các dòng sau vào file config: 
+	vi /etc/my.cnf
+ [mysqld]
+datadir=/var/lib/mysql
+user=mysql
+# Path to Galera library
+wsrep_provider=/usr/lib64/galera3/libgalera_smm.so
+# Cluster connection URL contains the IPs of node#1, node#2 and node#3vi
+wsrep_cluster_address=gcomm://192.168.254.102,192.168.254.130,192.168.254.124
+# In order for Galera to work correctly binlog format should be ROW
+binlog_format=ROW
+# MyISAM storage engine has only experimental support
+default_storage_engine=InnoDB
+# This changes how InnoDB autoincrement locks are managed and is a requirement for Galera
+innodb_autoinc_lock_mode=2
+# Node #1 address
+wsrep_node_address=192.168.254.102
+# SST method
+wsrep_sst_method=xtrabackup-v2
+# Cluster name
+wsrep_cluster_name=my_centos_cluster
+# Authentication for SST method
+wsrep_sst_auth="test01:password"
+- Lưu cấu hình và khởi động bằng lệnh: systemctl start mysql@bootstrap.service
+Kiểm tra cluster status bằng lệnh: mysql> show status like 'wsrep%';
+-  
+ Node 02: 192.168.254.124
+- Tạo user sử dụng xác thực các node.
+	CREATE USER 'test01'@'localhost' IDENTIFIED BY 'password';
+	GRANT ALL PRIVILEGES ON * . * TO 'test01'@'localhost';
+	FLUSH PRIVILEGES;
+- Stop MySQL
+- Cấu hình tương tự dòng wsrep_node_address=192.168.254.124
+- Lưu cấu hình và khởi động bằng lệnh: systemctl start mysql
+ Node 03: 192.168.254.124
+- Tạo user sử dụng xác thực các node.
+	CREATE USER 'test01'@'localhost' IDENTIFIED BY 'password';
+	GRANT ALL PRIVILEGES ON * . * TO 'test01'@'localhost';
+	FLUSH PRIVILEGES;
+- Stop MySQL
+ 
+- Cấu hình tương tự dòng wsrep_node_address=192.168.254.124
+	 
+Lưu cấu hình và khởi động bằng lệnh: systemctl start mysql

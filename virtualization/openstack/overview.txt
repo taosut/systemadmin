@@ -1,0 +1,17 @@
+OpenStack: Là một platform mã nguồn mở để triển khai Cloud Computing.
+
+Kiến trúc gồm tập hợp nhiều Service khác nhau:
+	A. 
+		1. Dashboard (Horizon): GIao tiếp với dịch vụ khác của Open Stack, cung cấp giao diện quản lý web mgmt, thao tác start/stop VM, configuration, phân quyền.
+		2. Compute (Nova): Là trung tâm của Openstack, quản lý (life_cycle) của VM, khởi tạo vận hành và xóa VM
+	B. Storage
+		1. Object Storage (Swift): Cung cấp khả năng lưu trữ phân tán (distributed architecture), tăng khả năng dự phòng, scale, performance.
+		2. Block Storage (Cinder): Cho phép thêm vào quản lý block-level storage vào VM (Tương tự với AWS EC2 Elastic Block- ESB)
+	C. Share Services
+		1. Identity Service (Keystore): Cung cấp khả năng chứng thực cho dịch vụ của Openstack.
+		2. Image Service (Glance): Nơi lưu trữ và quản lý image của VM.
+		3. Telemetry (Ceilometer): Cung cấp khả năng giám sát các dịch vụ trong Openstack.
+	4. High Level Service
+		1. Orchestration (Heat): Cung cấp bộ template cho hệ thống. Thông qua API, người dùng có thể tích hợp third party vào Openstack.
+		2. Database Service (Trove): Cho phép user thiếp lập database theo mong muốn, với khả năng mở rộng và tin cậy
+		

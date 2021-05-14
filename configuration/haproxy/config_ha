@@ -1,0 +1,166 @@
+1. node name của rabbitmq có dạng rabbit@hostname nên bạn cần chuẩn bị sẵn hostname cho mỗi node. Hostname là bất cứ string nào bạn muốn nhưng tốt nhất đừng sử dụng các ký tự đặc biệt trong này. Sau đó đưa vào /etc/hosts của cả hai node:
+	192.168.254.141 rabbitmq01 rabbitmq01.localdomain ### gọi là node 1
+	192.168.254.142 rabbitmq02 rabbitmq02.localdomain ### gọi là node 2
+
+2. Copy erlang cookie từ rabbitmq01 sang rabbitmq02
+	[root@rabbitmq01 ~]#scp –r /var/lib/rabbitmq/.erlang.cookie 192.168.254.2:/var/lib/rabbitmq/
+	Sau đó nhập pass truy cập vào 192.168.254.2 để copy
+	Trên server 2 :
+	Set quyền ưu tiên :
+	 
+	[root@rabbitmq02 ~]# chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie
+	[root@rabbitmq02 ~]# chmod 400 /var/lib/rabbitmq/.erlang.cookie
+	 
+	Xong reboot lại node2
+3. Khởi động rabbitmq-server trên mỗi node.
+	service rabbitmq-server start
+	
+4. Chọn một node làm khởi điểm sau đó các node còn lại sẽ join với node khởi điểm để hình thành lên cluster.
+	Trước khi thực hiện, chúng ta thử xem cluster status của từng node trước khi join với nhau. Trên mỗi node, bạn thực hiện lệnh
+	rabbitmqctl cluster_status 
+	5. Tạo cluster bằng cách join node 2 với node 1:
+	[root@rabbitmq02 ~]# rabbitmqctl stop_app
+	Stopping node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 ~]# rabbitmqctl join_cluster rabbit@rabbitmq01
+	Clustering node rabbit@rabbitmq02 with rabbit@rabbitmq01 ...
+	[root@rabbitmq02 ~]# rabbitmqctl start_app
+	Starting node rabbit@rabbitmq02 ...
+	
+6. Thực hiện test cluster rabbitmq
+	
+	
+	- Thực hiện stop rabbimq trên server 2 sau đó khởi động lại xem kết quả :
+	 
+	Trên server 2 : thực hiện stop rabbitmq
+ 
+	Xem cluster status trên server 1 đã thấy node 2 bị remove chỉ còn mỗi node 1 hoạt động
+ 
+	Trên server 2 : thực hiện start rabbitmq
+
+	Trên server 1: xem cluster_status trên server 1 thấy node 2 đã quay trở lại 
+	 
+	Như vậy, ngay sau khi được start trở lại, các node sẽ tự động tham gia vào cluster và running luôn
+	Trong các trường hợp có sự cố nghiêm trọng như toàn bộ các node đều down lần lượt hoặc tất cả đều down đồng thời thì quy trình start cluster lại hơi khác một chút. Chúng ta đi vào từng trường hợp một.
+	Trường hợp thứ nhất: Tình huống xảy ra khi bạn cần restart cluster để upgrade cho rabbitmq hoặc erlang. Sau khi node 1, node 2 được bạn stop thì thảm họa xảy ra với node còn lại. Node còn lại bị down ngoài ý muốn. Trong trường hợp này việc khởi động lại cluster đòi hỏi thứ tự: Node cuối cùng bị down phải là node đầu tiên được start. Giả sử các node bị down theo thứ tự: node 3 -> node 1 -> node 2. Sau đó tôi cố gắng start các node 3 hoặc node 1 đầu tiên. Tôi sẽ không thành công. Rabbitmq để lại vài dòng log sau:
+	This cluster node was shut down while other nodes were still running.
+	To avoid losing data, you should start the other nodes first, then
+	start this one. To force this node to start, first invoke
+	"rabbitmqctl force_boot". If you do so, any changes made on other
+	cluster nodes after this one was shut down may be lost.
+	Để khởi động được cluster, bạn chỉ cần tuân theo nguyên tắc, start node 2 đầu tiên. Với các node sau, thứ tự không quan trọng. Bạn có thể dùng thứ tự node 2 - > node 1 -> node 3 hoặc node2 -> node 3 -> node1.
+	Trường hợp thứ hai: Cũng giống trường hợp một nhưng đáng tiếc là node 2 bị sự cố quá nghiêm trọng không thể phục hồi được. Vậy là node cuối cùng không thể boot được. Lúc này bạn phải ép một node không phải node down cuối cùng làm node khởi điểm
+	[root@rabbitmq01 root]# rabbitmqctl force_boot
+	Forcing boot for Mnesia dir /var/lib/rabbitmq/mnesia/rabbit@rabbitmq01 ...
+	[root@rabbitmq01 root]# service rabbitmq-server start
+	Starting rabbitmq-server: SUCCESS
+	rabbitmq-server.
+	Sau đó bạn khởi động lại các node kế tiếp.
+	Trường hợp thứ ba: Khủng khiếp hơn ! Bạn chẳng làm gì nhưng cụm server mà chứa rabbitmq cluster bị crash đột ngột. Lúc này thì bạn chẳng thể biết node nào down trước hay down sau cả. Cách xử lý giống hệt trường hợp thứ hai
+	 
+	Bước 5 : Cấu hình HA ( High Availability ) cho RabbitMQ
+	Cấu hình Mirroring
+	Cấu hình Queue mirroring được thực hiện thông qua policy. Policie có thể thay đổi mọi thời điểm, đồng nghĩa với việc có thể tạo một non-mirrored queue sau đó biến chúng thành mirrored queue hoặc ngược lại.
+	Để tạo mirrored queue, ta tạo 1 policy để match và sử dụng key ha-mode và ha-params để set policy. Dưới đây là một vài ví dụ.
+	Policy match những queue với tên bắt đầu bằng "ha." sẽ mirror sang tất các node trong cluster:
+	rabbitmqctl set_policy ha-all "^ha\." '{"ha-mode":"all"}'  
+	
+	Policy match những queue với tên bắt đầu bằng "two." sẽ mirror sang 2 node bất kỳ trong cluster với option automatic synchronization:
+	rabbitmqctl set_policy ha-two "^two\." '{"ha-mode":"exactly","ha-params":2,"ha-sync-mode":"automatic"}'  
+	Policy match những queue với tên bắt đầu bằng "nodes." sẽ mirror các node được chỉ định cụ thể trong cluster:
+	rabbitmqctl set_policy ha-nodes "^nodes\." '{"ha-mode":"nodes","ha-params":["nodeA", "nodeB"]}'  
+	Rời một node khỏi cluster
+	Cách 1: Để cho bản thân node đó quên rằng nó đã từng ở trong cluster. Giả sử tôi muốn tách node 2 khỏi cluster hoàn toàn.
+	[root@rabbitmq02 root]# rabbitmqctl stop_app                                                                                                      
+	Stopping node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl reset
+	Resetting node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl start_app
+	Starting node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl cluster_status
+	Cluster status of node rabbit@rabbitmq02 ...
+	[{nodes,[{disc,[rabbit@rabbitmq02]}]},
+	 {running_nodes,[rabbit@rabbitmq02]},
+	 {cluster_name,<<"rabbit@rabbitmq02">>},
+	 {partitions,[]}]
+	Để reset thành công, bạn không được config cluster trong file cấu hình.
+	Reset đồng thời sẽ xóa mọi data của node 2 như vhost, user, exchange, queue...
+	Cách 2: Làm cho các node còn lại trong cluster hắt hủi node cần được tách khỏi cluster :(
+	[root@rabbitmq02 root]# rabbitmqctl stop_app
+	Stopping node rabbit@rabbitmq02 ...
+	[root@rabbitmq01 root]# rabbitmqctl forget_cluster_node rabbit@rabbitmq02
+	Removing node rabbit@rabbitmq02 from cluster ...
+	Lúc này các node còn lại trong cluster đều đã không coi node 2 nằm trong cluster nhưng node2 vẫn không chịu chấp nhận thực tế phũ phàng đó. Nếu bạn start_app node 2
+	Error: {error,{inconsistent_cluster,"Node rabbit@rabbit2 thinks it's clustered with node rabbit@rabbitmq01, but rabbit@rabbitmq01 disagrees"}}
+	Để node 2 hoạt động được bình thường, bạn phải làm nó quên đi nó từng thuộc về cluster.
+	[root@rabbitmq02 root]# rabbitmqctl reset
+	Resetting node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl start_app
+	Starting node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl cluster_status
+	Cluster status of node rabbit@rabbitmq02 ...
+	[{nodes,[{disc,[rabbit@rabbitmq02]}]},
+	 {running_nodes,[rabbit@rabbitmq02]},
+	 {cluster_name,<<"rabbit@rabbitmq02">>},
+	 {partitions,[]}]
+	Thêm một node vào cluster
+	[root@rabbitmq03 root]# rabbitmqctl stop_app
+	Stopping node rabbit@rabbitmq03 ...
+	[root@rabbitmq03 root]# rabbitmqctl join_cluster rabbit@rabbitmq01
+	Clustering node rabbit@rabbitmq03 with rabbit@rabbitmq01 ...
+	[root@rabbitmq03 root]# rabbitmqctl start_app
+	Starting node rabbit@rabbitmq03 ...
+	[root@rabbitmq03 root]# roorabbitmqctl cluster_status
+	Cluster status of node rabbit@rabbitmq03 ...
+	[{nodes,[{disc,[rabbit@rabbitmq01,rabbit@rabbitmq02,rabbit@rabbitmq03]}]},
+	 {running_nodes,[rabbit@rabbitmq01,rabbit@rabbitmq03,rabbit@rabbitmq02]},
+	 {cluster_name,<<"rabbit@rabbitmq01">>},
+	 {partitions,[]}]
+	Nếu cố join_cluster từ một running node, bạn sẽ gặp:
+	Error: mnesia_unexpectedly_running
+	Thêm một RAM node
+	So sánh RAM node với disc node
+	Sự khác biệt lớn nhất là ram node chỉ giữ metadata của nó trong memory còn bản thân các queue data vẫn lưu xuống disk. Sự khác biệt này cho phép ram node ít tạo ra các hoạt động IO hơn nên performance tốt hơn disc node. Một cluster hoàn toàn chỉ có ram node thì rất có nguy cơ mất metadata. Giải pháp an toàn hơn cả là trộn lẫn ram node và disc node. Trong cluster, phần metadata được replicate giữa các node (disc node lưu metadata trên disk) nên sẽ không lo mất sạch metadata.
+	[root@rabbitmq02 root]# rabbitmqctl stop_app
+	Stopping node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl join_cluster --ram rabbit@rabbitmq01
+	Clustering node rabbit@rabbitmq02 with rabbit@rabbitmq01 ...
+	[root@rabbitmq02 root]# rabbitmqctl start_app
+	Starting node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl cluster_status
+	Cluster status of node rabbit@rabbitmq02 ...
+	[{nodes,[{disc,[rabbit@rabbitmq03,rabbit@rabbitmq01]},{ram,[rabbit@rabbitmq02]}]},
+	 {running_nodes,[rabbit@rabbitmq01,rabbit@rabbitmq03,rabbit@rabbitmq02]},
+	 {cluster_name,<<"rabbit@rabbitmq01">>},
+	 {partitions,[]}]
+	 
+	Thay đổi node type
+	[root@rabbitmq02 root]# rabbitmqctl stop_app
+	Stopping node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl change_cluster_node_type disc
+	Turning rabbit@rabbitmq02 into a disc node ...
+	[root@rabbitmq02 root]# rabbitmqctl start_app
+	Starting node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl cluster_status
+	Cluster status of node rabbit@rabbitmq02 ...
+	[{nodes,[{disc,[rabbit@rabbitmq01,rabbit@rabbitmq02,rabbit@rabbitmq03]}]},
+	 {running_nodes,[rabbit@rabbitmq01,rabbit@rabbitmq03,rabbit@rabbitmq02]},
+	 {cluster_name,<<"rabbit@rabbitmq01">>},
+	 {partitions,[]}]
+	[root@rabbitmq02 root]# rabbitmqctl stop_app
+	Stopping node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl change_cluster_node_type ram
+	Turning rabbit@rabbitmq02 into a ram node ...
+	[root@rabbitmq02 root]# rabbitmqctl start_app
+	Starting node rabbit@rabbitmq02 ...
+	[root@rabbitmq02 root]# rabbitmqctl cluster_status
+	Cluster status of node rabbit@rabbitmq02 ...
+	[{nodes,[{disc,[rabbit@rabbitmq03,rabbit@rabbitmq01]},{ram,[rabbit@rabbitmq02]}]},
+	 {running_nodes,[rabbit@rabbitmq01,rabbit@rabbitmq03,rabbit@rabbitmq02]},
+	 {cluster_name,<<"rabbit@rabbitmq01">>},
+	 {partitions,[]}]
+	Vấn đề timeout
+	Bản thân client sẽ luôn giữ kết nối đến rabbitmq. Sẽ không có timeout nếu như bạn kết nối trực tiếp nhưng khi qua một proxy thì vấn đề xuất hiện. Proxy sẽ không giữ kết nối liên tục giữa client và backend nên trong quá trình sử dụng bạn có thể thấy hiện tượng client bị mất kết nối sau một quãng thời gian không sử dụng. Đáng tiếc rabbitmq client không có cơ chế reconnect lại.
+	Một linux client có cơ chế tự động gửi lại keep-alive packet để duy trì kết nối nhưng quãng thời gian này quá lâu. cat /proc/sys/net/ipv4/tcp_keepalive_time trả về giá trị 7200 nghĩa là cứ sau 2 tiếng mới có một cú gửi keep-alived. Muốn proxy duy trì kết nối thì keep-alived packet phải được gửi trước khi timeout của proxy kết thúc. Trong trường hợp của tôi proxy là haproxy. Tôi điều chỉnh chút ít về cấu hình. Tôi bổ sung ba dòng sau vào cụm backend rabbitmq
+	timeout client  3h
+	timeout server  3h
+	option          clitcpka
