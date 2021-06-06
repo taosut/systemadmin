@@ -1,0 +1,57 @@
+###########Install and configure controller node for Ubuntu##################
+
+Prerequisites:
+Before you install and configure the Compute service, you must create databases, service credentials, and API endpoints.
+
+  1. To create the databases, complete these steps:
+
+  Use the database access client to connect to the database server as the root user:
+  # mysql
+  Create the nova_api, nova, and nova_cell0 databases:
+  MariaDB [(none)]> CREATE DATABASE nova_api;
+  MariaDB [(none)]> CREATE DATABASE nova;
+  MariaDB [(none)]> CREATE DATABASE nova_cell0;
+  Grant proper access to the databases:
+
+    MariaDB [(none)]> GRANT ALL PRIVILEGES ON nova_api.* TO 'nova'@'localhost' \
+      IDENTIFIED BY '123456';
+    MariaDB [(none)]> GRANT ALL PRIVILEGES ON nova_api.* TO 'nova'@'%' \
+      IDENTIFIED BY '123456';
+
+    MariaDB [(none)]> GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'localhost' \
+      IDENTIFIED BY '123456';
+    MariaDB [(none)]> GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'%' \
+      IDENTIFIED BY '123456';
+
+    MariaDB [(none)]> GRANT ALL PRIVILEGES ON nova_cell0.* TO 'nova'@'localhost' \
+      IDENTIFIED BY '123456';
+    MariaDB [(none)]> GRANT ALL PRIVILEGES ON nova_cell0.* TO 'nova'@'%' \
+      IDENTIFIED BY '123456';
+    Replace 123456 with a suitable password.
+
+Exit the database access client.
+
+Source the admin credentials to gain access to admin-only CLI commands:
+
+$ . admin-openrc
+Create the Compute service credentials:
+
+Create the nova user:
+
+$ openstack user create --domain default --password-prompt nova
+
+User Password:
+Repeat User Password:
++---------------------+----------------------------------+
+| Field               | Value                            |
++---------------------+----------------------------------+
+| domain_id           | default                          |
+| enabled             | True                             |
+| id                  | 8a7dbf5279404537b1c7b86c033620fe |
+| name                | nova                             |
+| options             | {}                               |
+| password_expires_at | None                             |
++---------------------+----------------------------------+
+Add the admin role to the nova user:
+
+$ openstack role add --project service --user nova admin

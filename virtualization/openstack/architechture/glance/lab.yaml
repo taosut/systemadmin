@@ -1,0 +1,18 @@
+Install and configure Glance Service
+
+
+1. To create the database, complete these steps:
+
+Use the database access client to connect to the database server as the root user:
+# mysql
+Create the glance database:
+MariaDB [(none)]> CREATE DATABASE glance;
+Grant proper access to the glance database:
+
+MariaDB [(none)]> GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' \
+  IDENTIFIED BY 'abc@123';
+MariaDB [(none)]> GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'%' \
+  IDENTIFIED BY 'abc@123';
+Replace abc@123 with a suitable password.
+
+Exit the database access client.

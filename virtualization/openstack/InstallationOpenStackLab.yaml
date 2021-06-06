@@ -1,0 +1,90 @@
+1. Verify OS & IP:
+  controller1: (Ubuntu 20.04)
+	  provider: 192.168.254.113/24
+	  mgmt: 192.168.253.126/24
+  compute1: 
+    provider: 192.168.254.136/24
+	  mgmt: 192.168.253.122/24
+  block1:
+	  provider: 192.168.254.154/24
+  	mgmt: 192.168.253.123/24
+  object1:
+  	provider: 192.168.254.150/24
+  	mgmt: 192.168.253.124/24
+
+2. Edit Hosts file on all node and add follow command:
+	# controller 
+	192.168.253.125 controller
+	# compute1
+	192.168.253.122 compute1
+	# block1
+	192.168.254.123 block1
+	# object1
+	192.168.253.124 object1
+
+3. Install $ Config NTP:
+	controller: 
+		# apt install chrony
+		vi /etc/chrony/chrony.conf 
+		#add 4 line: 
+		  server 0.vn.pool.ntp.org iburst 
+	    server 1.asia.pool.ntp.org iburst 
+	    server 3.asia.pool.ntp.org iburst 
+	    allow 192.168.253.0/24
+    #systemctl restart chrony
+	other node:
+		# apt install chrony
+		vi /etc/chrony/chrony.conf
+		#add line:
+		server controller iburst
+    #systemctl restart chrony
+		chronyc sources
+4. OpenStack Packages (OpenStack Ussuri - On All Node):
+	#add-apt-repository cloud-archive:ussuri
+5. SQL Database (Install on controller node):
+	Ubuntu 20:04:
+		apt install mariadb-server python3-pymysql
+	Ubuntu 18:04:
+		apt install mariadb-server python-pymysql
+  Create and edit the /etc/mysql/mariadb.conf.d/99-openstack.cnf file and complete the following actions:
+      [mysqld]
+      bind-address = 192.168.253.126
+
+      default-storage-engine = innodb
+      innodb_file_per_table = on
+      max_connections = 4096
+      collation-server = utf8_general_ci
+      character-set-server = utf8
+  # service mysql restart
+  # systemctl enable mysql
+  # mysql_secure_installation
+
+6. Message queue for Ubuntu (RabbitMQ - Install on controller node):
+  Install Packages RabbitMQ:
+    # apt install rabbitmq-server
+  Add the openstack user:
+    # rabbitmqctl add_user openstack 123456
+  Permit configuration, write, and read access for the openstack user:
+    # rabbitmqctl set_permissions openstack ".*" ".*" ".*"
+7. Memcached (Install on controller node):
+  Install the packages:
+    # apt install memcached libmemcached-tools
+  Edit the /etc/memcached.conf file and configure the service to use the management IP address of the controller node. This is to enable access by other nodes via the management network:
+    -l 192.168.253.126
+  Restart the Memcached service:
+    # service memcached restart
+    # systemctl enable memcached
+8. Etcd key value store (Install on controller node):
+    # apt install etcd
+    vi /etc/default/etcd:
+ETCD_NAME="controller"
+ETCD_DATA_DIR="/var/lib/etcd"
+ETCD_INITIAL_CLUSTER_STATE="new"
+ETCD_INITIAL_CLUSTER_TOKEN="etcd-cluster-01"
+ETCD_INITIAL_CLUSTER="controller=http://192.168.253.126:2380"
+ETCD_INITIAL_ADVERTISE_PEER_URLS="http://192.168.253.126:2380"
+ETCD_ADVERTISE_CLIENT_URLS="http://192.168.253.126:2379"
+ETCD_LISTEN_PEER_URLS="http://0.0.0.0:2380"
+ETCD_LISTEN_CLIENT_URLS="http://192.168.253.126:2379"
+    # systemctl enable etcd
+    # systemctl restart etcd
