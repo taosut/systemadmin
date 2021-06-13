@@ -1,0 +1,20 @@
+---
+#ww.yml : Playbook for web servers
+- hosts: ww
+  remote_user: root
+  roles:
+- { role: nginx, port: 8080}
+
+
+---
+# essential tasks. should run on all nodes
+ - name: creating devops group
+   group: name=devops state=present
+ - name: create devops user
+   user: name=devops comment="Devops User" uid=2001 group=devops
+ - name: install htop package
+   action: apt name=htop state=present update_cache=yes
+ - include: install.yml
+ - include: service.yml
+
+ SHOW OPEN TABLES WHERE `Table` LIKE '%user_subscribe%' AND `Database` LIKE 'gamezone' AND In_use > 0;

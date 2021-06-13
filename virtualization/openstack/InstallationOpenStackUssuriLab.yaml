@@ -1,26 +1,35 @@
 1. Verify OS & IP:
   controller: (Ubuntu 20.04)
 	  provider: 192.168.254.113/24
-	  mgmt: 192.168.253.126/24
+	  mgmt: 10.0.0.2/24
   compute1: 
     provider: 192.168.254.136/24
-	  mgmt: 192.168.253.122/24
+	  mgmt: 10.0.0.3/24
   block1:
 	  provider: 192.168.254.154/24
-  	mgmt: 192.168.253.123/24
+  	mgmt: 110.0.0.4/24
   object1:
   	provider: 192.168.254.150/24
-  	mgmt: 192.168.253.124/24
+  	mgmt: 10.0.0.5/24
+  object2:
+    provider: 192.168.254.155/24
+    mgmt: 10.0.0.6/24
 
 2. Edit Hosts file on all node and add follow command:
 # controller 
-192.168.253.126 controller
+10.0.0.2 controller
 # compute1
-192.168.253.122 compute1
+10.0.0.3 compute1
 # block1
-192.168.254.123 block1
+10.0.0.4 block1
 # object1
-192.168.253.124 object1
+10.0.0.5 object1
+10.0.0.6 object2
+echo "10.0.0.2 controller" >> /etc/hosts
+echo "10.0.0.3 compute1" >> /etc/hosts
+echo "10.0.0.4 block1" >> /etc/hosts
+echo "10.0.0.5 object1" >> /etc/hosts
+echo "10.0.0.6 object2" >> /etc/hosts
 
 3. Install $ Config NTP:
 	controller: 
@@ -47,14 +56,36 @@
 	Ubuntu 18:04:
 		apt install mariadb-server python-pymysql
   Create and edit the /etc/mysql/mariadb.conf.d/99-openstack.cnf file and complete the following actions:
+    #######
+    After upgrading the MariaDB from 10.1 to 10.3 resolved this issue.
+
+To get the Installed version of MariaDB
+1. dpkg -l | grep -i mariadb
+2. mysql -V
+
+To Upgrade the MariaDB to latest version
+systemctl stop mysqld
+apt-get install software-properties-common
+apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+add-apt-repository 'deb [arch=amd64] http://www.ftp.saix.net/DB/mariadb/repo/10.3/ubuntu bionic main'
+apt update
+apt install mariadb-server python-mysqldb
+
+Check the MariaDB version after upgrade
+1. dpkg -l | grep -i mariadb
+2. systemctl start mysqld
+   mysql -V
+
+the issue is resolved.
+##########
       ######
-[mysqld]
-bind-address = 192.168.253.126
-default-storage-engine = innodb
-innodb_file_per_table = on
+echo "[mysqld] 
+bind-address = 10.0.0.2
+default-storage-engine = innodb  
+innodb_file_per_table = on 
 max_connections = 4096
 collation-server = utf8_general_ci
-character-set-server = utf8
+character-set-server = utf8" >> /etc/mysql/mariadb.conf.d/99-openstack.cnf
       ########
       $ service mysql restart
       $ systemctl enable mysql
@@ -76,17 +107,51 @@ character-set-server = utf8
     $ systemctl enable memcached
 8. Etcd key value store (Install on controller node):
     $ apt install etcd
-    vi /etc/default/etcd:
-ETCD_NAME="controller"
+    $ vi /etc/default/etcd
+echo "ETCD_NAME="controller"
 ETCD_DATA_DIR="/var/lib/etcd"
 ETCD_INITIAL_CLUSTER_STATE="new"
 ETCD_INITIAL_CLUSTER_TOKEN="etcd-cluster-01"
-ETCD_INITIAL_CLUSTER="controller=http://192.168.253.126:2380"
-ETCD_INITIAL_ADVERTISE_PEER_URLS="http://192.168.253.126:2380"
-ETCD_ADVERTISE_CLIENT_URLS="http://192.168.253.126:2379"
+ETCD_INITIAL_CLUSTER="controller=http://10.0.0.2:2380"
+ETCD_INITIAL_ADVERTISE_PEER_URLS="http://10.0.0.2:2380"
+ETCD_ADVERTISE_CLIENT_URLS="http://10.0.0.2:2379"
 ETCD_LISTEN_PEER_URLS="http://0.0.0.0:2380"
-ETCD_LISTEN_CLIENT_URLS="http://192.168.253.126:2379"
+ETCD_LISTEN_CLIENT_URLS="http://10.0.0.2:2379"" >> /etc/default/etcd
     $ systemctl enable etcd
     $ systemctl restart etcd
 
+swift-ring-builder object.builder add \
+  --region 1 --zone 1 --ip 192.168.253.124 --port 6200 --device sdb --weight 40
+curl -o /etc/swift/account-server.conf https://opendev.org/openstack/swift/raw/branch/master/etc/account-server.conf-sample
+curl -o /etc/swift/container-server.conf https://opendev.org/openstack/swift/raw/branch/master/etc/container-server.conf-sample
+curl -o /etc/swift/object-server.conf https://opendev.org/openstack/swift/raw/branch/master/etc/object-server.conf-sample
+OPENSTACK_NEUTRON_NETWORK = {
+    ...
+    'enable_router': False,
+    'enable_quotas': False,
+    'enable_ipv6': False,
+    'enable_distributed_router': False,
+    'enable_ha_router': False,
+    'enable_lb': False,
+    'enable_firewall': False,
+    'enable_vpn': False,
+    'enable_fip_topology_check': False,
+}
 
+
+openstack network create  --share --external \
+  --provider-physical-network provider \
+  --provider-network-type flat provider
+openstack subnet create --network provider \
+  --allocation-pool start=192.168.253.190,end=192.168.253.230 \
+  --dns-nameserver 8.8.4.4 --gateway 192.168.253.254 \
+  --subnet-range 192.168.253.0/24 provider
+
+openstack server create --flavor m1.nano --image cirros \
+  --nic net-id=fa728d89-a533-43c1-b793-f4f472db00dd --security-group default \
+  --key-name mykey selfservice-instance
+
+openstack server create --flavor m1.nano --image cirros \
+  --nic net-id=c6e13d1a-0953-4caa-aca3-2b53e522e0aa --security-group default \
+  --key-name mykey provider-instance 02
+  tomcat

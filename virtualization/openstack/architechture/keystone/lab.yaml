@@ -4,10 +4,10 @@ $ mysql
 Create the keystone database:
 MariaDB [(none)]> CREATE DATABASE keystone;
 Grant proper access to the keystone database:
-MariaDB [(none)]> GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' \
-IDENTIFIED BY 'abc@123';
+MariaDB [(none)]> GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'127.0.0.1' \
+IDENTIFIED BY '123456';
 MariaDB [(none)]> GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' \
-IDENTIFIED BY 'abc@123';
+IDENTIFIED BY '123456';
 
 Install and configure components:
   Run the following command to install the packages:
@@ -15,22 +15,22 @@ Install and configure components:
   Edit the /etc/keystone/keystone.conf file and complete the following actions:
   In the [database] section, configure database access:
   [database]
-  connection = mysql+pymysql://keystone:abc@123@controller/keystone
+  connection = mysql+pymysql://keystone:123456@controller/keystone
   In the [token] section, configure the Fernet token provider:
   [token]
   provider = fernet
   Populate the Identity service database:
-  $ su -s /bin/sh -c "keystone-manage db_sync" keystone
+  $ /bin/sh -c "keystone-manage db_sync" keystone
   Initialize Fernet key repositories:
     $ keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone
     $ keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
   Bootstrap the Identity service:
-    $ keystone-manage bootstrap --bootstrap-password abc@123 \
+    $ keystone-manage bootstrap --bootstrap-password 123456 \
     --bootstrap-admin-url http://controller:5000/v3/ \
     --bootstrap-internal-url http://controller:5000/v3/ \
     --bootstrap-public-url http://controller:5000/v3/ \
     --bootstrap-region-id RegionOne
-    keystone-manage bootstrap --bootstrap-password abc@123 --bootstrap-admin-url http://controller:35357/v3/ --bootstrap-internal-url http://controller:35357/v3/ --bootstrap-public-url http://controller:5000/v3/ --bootstrap-region-id RegionOne
+    keystone-manage bootstrap --bootstrap-password 123456 --bootstrap-admin-url http://controller:35357/v3/ --bootstrap-internal-url http://controller:35357/v3/ --bootstrap-public-url http://controller:5000/v3/ --bootstrap-region-id RegionOne
 Configure the Apache HTTP server:
   Edit the /etc/apache2/apache2.conf file and configure the ServerName option to reference the controller node:
   ServerName controller
@@ -38,7 +38,7 @@ Configure the Apache HTTP server:
   $ service apache2 restart
   Configure the administrative account by setting the proper environmental variables:
   $ export OS_USERNAME=admin
-  $ export OS_PASSWORD=abc@123
+  $ export OS_PASSWORD=123456
   $ export OS_PROJECT_NAME=admin
   $ export OS_USER_DOMAIN_NAME=Default
   $ export OS_PROJECT_DOMAIN_NAME=Default
@@ -48,69 +48,125 @@ Configure the Apache HTTP server:
 10. Create a domain, projects, users, and roles:
   10.1. Although the “default” domain already exists from the keystone-manage bootstrap step in this guide, a formal way to create a new domain would be:
     $ openstack domain create --description "An Example Domain" example
-    +-------------+----------------------------------+
-    | Field       | Value                            |
-    +-------------+----------------------------------+
-    | description | An Example Domain                |
-    | enabled     | True                             |
-    | id          | 2f4f80574fd84fe6ba9067228ae0a50c |
-    | name        | example                          |
-    | tags        | []                               |
-    +-------------+----------------------------------+
+      +-------------+----------------------------------+
+      | Field       | Value                            |
+      +-------------+----------------------------------+
+      | description | An Example Domain                |
+      | enabled     | True                             |
+      | id          | 2f4f80574fd84fe6ba9067228ae0a50c |
+      | name        | example                          |
+      | tags        | []                               |
+      +-------------+----------------------------------+
   10.2. This guide uses a service project that contains a unique user for each service that you add to your environment. Create the service project:
     $ openstack project create --domain default \
     --description "Service Project" service
-    +-------------+----------------------------------+
-    | Field       | Value                            |
-    +-------------+----------------------------------+
-    | description | Service Project                  |
-    | domain_id   | default                          |
-    | enabled     | True                             |
-    | id          | 24ac7f19cd944f4cba1d77469b2a73ed |
-    | is_domain   | False                            |
-    | name        | service                          |
-    | parent_id   | default                          |
-    | tags        | []                               |
-    +-------------+----------------------------------+
+      +-------------+----------------------------------+
+      | Field       | Value                            |
+      +-------------+----------------------------------+
+      | description | Service Project                  |
+      | domain_id   | default                          |
+      | enabled     | True                             |
+      | id          | 24ac7f19cd944f4cba1d77469b2a73ed |
+      | is_domain   | False                            |
+      | name        | service                          |
+      | parent_id   | default                          |
+      | tags        | []                               |
+      +-------------+----------------------------------+
   10.3. Regular (non-admin) tasks should use an unprivileged project and user. As an example, this guide creates the myproject project and myuser user:
     Create the myproject project:
     $ openstack project create --domain default \
     --description "Demo Project" myproject
-    +-------------+----------------------------------+
-    | Field       | Value                            |
-    +-------------+----------------------------------+
-    | description | Demo Project                     |
-    | domain_id   | default                          |
-    | enabled     | True                             |
-    | id          | 231ad6e7ebba47d6a1e57e1cc07ae446 |
-    | is_domain   | False                            |
-    | name        | myproject                        |
-    | parent_id   | default                          |
-    | tags        | []                               |
-    +-------------+----------------------------------+
+      +-------------+----------------------------------+
+      | Field       | Value                            |
+      +-------------+----------------------------------+
+      | description | Demo Project                     |
+      | domain_id   | default                          |
+      | enabled     | True                             |
+      | id          | 231ad6e7ebba47d6a1e57e1cc07ae446 |
+      | is_domain   | False                            |
+      | name        | myproject                        |
+      | parent_id   | default                          |
+      | tags        | []                               |
+      +-------------+----------------------------------+
     Create the myuser user:
     $ openstack user create --domain default \
       --password-prompt myuser
-    User Password:
-    Repeat User Password:
-    +---------------------+----------------------------------+
-    | Field               | Value                            |
-    +---------------------+----------------------------------+
-    | domain_id           | default                          |
-    | enabled             | True                             |
-    | id                  | aeda23aa78f44e859900e22c24817832 |
-    | name                | myuser                           |
-    | options             | {}                               |
-    | password_expires_at | None                             |
-    +---------------------+----------------------------------+
+    User Password: 123456
+    Repeat User Password: 123456
+      +---------------------+----------------------------------+
+      | Field               | Value                            |
+      +---------------------+----------------------------------+
+      | domain_id           | default                          |
+      | enabled             | True                             |
+      | id                  | aeda23aa78f44e859900e22c24817832 |
+      | name                | myuser                           |
+      | options             | {}                               |
+      | password_expires_at | None                             |
+      +---------------------+----------------------------------+
     Create the myrole role:
-    $ openstack role create myrole
-    +-----------+----------------------------------+
-    | Field     | Value                            |
-    +-----------+----------------------------------+
-    | domain_id | None                             |
-    | id        | 997ce8d05fc143ac97d83fdfb5998552 |
-    | name      | myrole                           |
-    +-----------+----------------------------------+
+      $ openstack role create myrole
+      +-----------+----------------------------------+
+      | Field     | Value                            |
+      +-----------+----------------------------------+
+      | domain_id | None                             |
+      | id        | 997ce8d05fc143ac97d83fdfb5998552 |
+      | name      | myrole                           |
+      +-----------+----------------------------------+
     Add the myrole role to the myproject project and myuser user:
     $ openstack role add --project myproject --user myuser myrole
+
+11. Creating the scripts:
+Create client environment scripts for the admin and demo projects and users. Future portions of this guide reference these scripts to load appropriate credentials for client operations.
+
+ Note
+
+The paths of the client environment scripts are unrestricted. For convenience, you can place the scripts in any location, however ensure that they are accessible and located in a secure place appropriate for your deployment, as they do contain sensitive credentials.
+
+Create and edit the admin-openrc file and add the following content:
+
+ Note
+
+The OpenStack client also supports using a clouds.yaml file. For more information, see the os-client-config.
+
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_USER_DOMAIN_NAME=Default
+export OS_PROJECT_NAME=admin
+export OS_USERNAME=admin
+export OS_PASSWORD=ADMIN_PASS
+export OS_AUTH_URL=http://controller:5000/v3
+export OS_IDENTITY_API_VERSION=3
+export OS_IMAGE_API_VERSION=2
+Replace ADMIN_PASS with the password you chose for the admin user in the Identity service.
+
+Create and edit the demo-openrc file and add the following content:
+
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_USER_DOMAIN_NAME=Default
+export OS_PROJECT_NAME=myproject
+export OS_USERNAME=myuser
+export OS_PASSWORD=123456
+export OS_AUTH_URL=http://controller:5000/v3
+export OS_IDENTITY_API_VERSION=3
+export OS_IMAGE_API_VERSION=2
+Replace DEMO_PASS with the password you chose for the demo user in the Identity service.
+
+12. Using the scripts:
+To run clients as a specific project and user, you can simply load the associated client environment script prior to running them. For example:
+
+Load the admin-openrc file to populate environment variables with the location of the Identity service and the admin project and user credentials:
+
+$ . admin-openrc
+Request an authentication token:
+
+$ openstack token issue
+
+  +------------+-----------------------------------------------------------------+
+  | Field      | Value                                                           |
+  +------------+-----------------------------------------------------------------+
+  | expires    | 2016-02-12T20:44:35.659723Z                                     |
+  | id         | gAAAAABWvjYj-Zjfg8WXFaQnUd1DMYTBVrKw4h3fIagi5NoEmh21U72SrRv2trl |
+  |            | JWFYhLi2_uPR31Igf6A8mH2Rw9kv_bxNo1jbLNPLGzW_u5FC7InFqx0yYtTwa1e |
+  |            | eq2b0f6-18KZyQhs7F3teAta143kJEWuNEYET-y7u29y0be1_64KYkM7E       |
+  | project_id | 343d245e850143a096806dfaefa9afdc                                |
+  | user_id    | ac3377633149401296f6c0d92d79dc16                                |
+  +------------+-----------------------------------------------------------------+

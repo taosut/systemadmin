@@ -1,3 +1,5 @@
+Extend LVM Centos 6
+
 1. Create New Partition (mode LVM)
 # fdisk /dev/<name-partition>
 	[root@localhost ~]# fdisk /dev/sda
