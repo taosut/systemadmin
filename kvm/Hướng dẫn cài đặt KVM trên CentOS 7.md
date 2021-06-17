@@ -1,0 +1,5 @@
+# Hướng dẫn cài đặt KVM trên CentOS 7
+## 1. KVM là gì?
+KVM (kernel-base Virtual Machine) là một phần mềm ảo hóa cho các hệ điều hành chạy nhân Linux, dành cho CPU hỗ trợ công nghệ ảo hóa Intel-VT/ AMD-V. KVM biến máy host/server trở thành một hypervisor.
+## 2. Cài đặt KVM trên CentOS 7
+###2.1. Kiểm tra xem CPU Có hỗ trợ ảo hóa không?

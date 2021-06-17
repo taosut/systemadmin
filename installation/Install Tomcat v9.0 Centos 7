@@ -1,10 +1,13 @@
-Install Java Centos 7
+Install Tomcat v9.0 Centos 7
+
+
+A. Install Java Centos 7
 
 1. Update
 	# yum update -y
 
 2. Install Java 8
-	# yum install java-1.8.0-openjdk 
+	# yum install java-1.8.0-openjdk
 
 3. Verify installation
 	[root@localhost ~]# java -version
@@ -29,3 +32,5 @@ Install Java Centos 7
 	4.4. Verify setup
 	# echo $JAVA_HOME
 	/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.292.b10-1.el7_9.x86_64/jre/bin/java
+
+B. Install Tomcat
