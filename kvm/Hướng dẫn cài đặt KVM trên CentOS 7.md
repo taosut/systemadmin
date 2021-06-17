@@ -19,7 +19,7 @@ KVM (kernel-base Virtual Machine) là một phần mềm ảo hóa cho các hệ
 - virt-manager: cung cấp giao diện đồ họa để quản lý máy ảo
 - virt-install: Cung cấp lệnh để cài đặt máy ảo  
 ### 2.3. Khởi động KVM 
-- Chạy lệnh khởi động và cho phép kvm khởi động cùng OS
+- Chạy lệnh khởi động và cho phép kvm khởi động cùng OS  
 `# systemctl enable libvirtd`  
 `# systemctl start libvirtd`  
 - Kiểm tra các module được cài đặt  
