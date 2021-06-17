@@ -4,8 +4,8 @@ KVM (kernel-base Virtual Machine) là một phần mềm ảo hóa cho các hệ
 ## 2. Cài đặt KVM trên CentOS 7
 ### 2.1. Kiểm tra xem CPU Có hỗ trợ ảo hóa không?
 Chạy lệnh sau kiểm tra xem CPU có hỗ trợ ảo hóa không    
-`[root@thk_02 ~]# lscpu | grep Virtualization
-Virtualization:        VT-x
+`[root@thk_02 ~]# lscpu | grep Virtualization  
+Virtualization:        VT-x  
 Virtualization type:   full`    
-`[root@thk_02 ~]# egrep -c "svm|vmx" /proc/cpuinfo
+`[root@thk_02 ~]# egrep -c "svm|vmx" /proc/cpuinfo  
 4`
