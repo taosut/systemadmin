@@ -17,10 +17,10 @@ KVM (kernel-base Virtual Machine) là một phần mềm ảo hóa cho các hệ
 - libvirt: cung cấp libvirt mà bạn cần quản lý qemu và KVM bằng libvirt.
 - bridge-utils: chứa một tiện ích cần thiết để tạo và quản lý các thiết bị bridge.
 - virt-manager: cung cấp giao diện đồ họa để quản lý máy ảo
-- virt-install: Cung cấp lệnh để cài đặt máy ảo
-Khởi động KVM
-`# systemctl enable libvirtd`
-`# systemctl start libvirtd`
+- virt-install: Cung cấp lệnh để cài đặt máy ảo  
+Khởi động KVM  
+`# systemctl enable libvirtd`  
+`# systemctl start libvirtd`  
 Kiểm tra các module được cài đặt
 `# lsmod | grep -i kvm`  
 `kvm_intel             188740  0`  
