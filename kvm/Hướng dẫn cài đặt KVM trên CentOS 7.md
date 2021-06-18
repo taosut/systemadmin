@@ -7,7 +7,7 @@ KVM (kernel-base Virtual Machine) là một phần mềm ảo hóa cho các hệ
 `[root@thk_02 ~]# lscpu | grep Virtualization`  
 `Virtualization:        VT-x`  
 `Virtualization type:   full`  
-- Nếu kết quả lệnh này trả về không có gì thì không hỗ trợ  
+- Nếu kết quả lệnh này trả về không có gì thì không hỗ trợ cần cấu hình lại  
 `[root@thk_02 ~]# egrep -c "svm|vmx" /proc/cpuinfo`  
 `4`  
 - Nếu kết quả lệnh này trả về "0" thì CPU không hỗ trợ ảo hóa.
